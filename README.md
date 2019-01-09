@@ -16,13 +16,10 @@ import (
 )
 
 func main() {
-	// CreateHash returns a Argon2id hash of a plain-text password, using the
-	// provided algorithm parameters and a cryptographically-secure random salt.
-	// The hash returned follows the format used by the Argon2 reference C implementation
-	// and looks like this:
-	//
+	// CreateHash returns a Argon2id hash of a plain-text password using the
+	// provided algorithm parameters. The returned hash follows the format used
+	// by the Argon2 reference C implementation and looks like this:
 	// $argon2id$v=19$m=65536,t=3,p=2$c29tZXNhbHQ$RdescudvJCsgt3ub+b+dWRWJTmaaJObG
-	//
 	hash, err := argon2id.CreateHash("pa$$word", argon2id.DefaultParams)
 	if err != nil {
 		log.Fatal(err)
