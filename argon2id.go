@@ -1,5 +1,5 @@
 // argon2id provides a convience wrapper around Go's golang.org/x/crypto/argon2
-// implementation which makes it simpler to securely hash and verify passwords
+// implementation, making it simpler to securely hash and verify passwords
 // using Argon2.
 //
 // It enforces use of the Argon2id algorithm variant and cryptographically-secure
@@ -48,7 +48,7 @@ var DefaultParams = &Params{
 // number of threads that the work is spread across. Important note: Changing the
 // value of the Parallelism parameter changes the hash output.
 //
-// For guidance and a outline process for choosing appropriate parameters see
+// For guidance and an outline process for choosing appropriate parameters see
 // https://tools.ietf.org/html/draft-irtf-cfrg-argon2-04#section-4
 type Params struct {
 	// The amount of memory used by the algorithm (in kibibytes).
