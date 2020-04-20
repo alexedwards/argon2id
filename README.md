@@ -62,7 +62,7 @@ params := &Params{
 }
 
 
-hash, err := argon2id.CreateHash("pa$$word", argon2id.DefaultParams)
+hash, err := argon2id.CreateHash("pa$$word", params)
 if err != nil {
 	log.Fatal(err)
 }
