@@ -28,11 +28,18 @@ var (
 )
 
 // DefaultParams provides some sane default parameters for hashing passwords.
-// You are encouraged to change the Memory, Iterations and Parallelism parameters
-// to values appropraite for the environment that your code will be running in.
+//
+// Follows recommendations given by the Argon2 RFC:
+// "The Argon2id variant with t=1 and maximum available memory is RECOMMENDED as a
+// default setting for all environments. This setting is secure against side-channel
+// attacks and maximizes adversarial costs on dedicated bruteforce hardware.""
+//
+// The default parameters should generally be used for development/testing purposes
+// only. Custom parameters should be set for production applications depending on
+// available memory/CPU resources and business requirements.
 var DefaultParams = &Params{
 	Memory:      64 * 1024,
-	Iterations:  3,
+	Iterations:  1,
 	Parallelism: 2,
 	SaltLength:  16,
 	KeyLength:   32,
@@ -58,6 +65,7 @@ type Params struct {
 	Iterations uint32
 
 	// The number of threads (or lanes) used by the algorithm.
+	// Recommended value is between 1 and runtime.NumCPU().
 	Parallelism uint8
 
 	// Length of the random salt. 16 bytes is recommended for password hashing.
