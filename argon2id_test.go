@@ -55,3 +55,36 @@ func TestComparePasswordAndHash(t *testing.T) {
 		t.Error("expected password and hash to not match")
 	}
 }
+
+func TestDecodeHash(t *testing.T) {
+	hash, err := CreateHash("pa$$word", DefaultParams)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	params, _, _, err := DecodeHash(hash)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if *params != *DefaultParams {
+		t.Fatalf("expected %#v got %#v", *DefaultParams, *params)
+	}
+}
+
+func TestCheckHash(t *testing.T) {
+	hash, err := CreateHash("pa$$word", DefaultParams)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ok, params, err := CheckHash("pa$$word", hash)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ok {
+		t.Fatal("expected password to match")
+	}
+	if *params != *DefaultParams {
+		t.Fatalf("expected %#v got %#v", *DefaultParams, *params)
+	}
+}
