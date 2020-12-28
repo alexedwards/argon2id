@@ -102,9 +102,17 @@ func CreateHash(password string, params *Params) (hash string, err error) {
 // contained in the hash. It returns true if they match, otherwise it returns
 // false.
 func ComparePasswordAndHash(password, hash string) (match bool, err error) {
-	params, salt, key, err := decodeHash(hash)
+	match, _, err = CheckHash(password, hash)
+	return match, err
+}
+
+// CheckHash is like ComparePasswordAndHash, except it also returns the params that the hash was
+// created with. This can be useful if you want to update your hash params over time (which you
+// should).
+func CheckHash(password, hash string) (match bool, params *Params, err error) {
+	params, salt, key, err := DecodeHash(hash)
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
 
 	otherKey := argon2.IDKey([]byte(password), salt, params.Iterations, params.Memory, params.Parallelism, params.KeyLength)
@@ -113,12 +121,12 @@ func ComparePasswordAndHash(password, hash string) (match bool, err error) {
 	otherKeyLen := int32(len(otherKey))
 
 	if subtle.ConstantTimeEq(keyLen, otherKeyLen) == 0 {
-		return false, nil
+		return false, params, nil
 	}
 	if subtle.ConstantTimeCompare(key, otherKey) == 1 {
-		return true, nil
+		return true, params, nil
 	}
-	return false, nil
+	return false, params, nil
 }
 
 func generateRandomBytes(n uint32) ([]byte, error) {
@@ -131,7 +139,9 @@ func generateRandomBytes(n uint32) ([]byte, error) {
 	return b, nil
 }
 
-func decodeHash(hash string) (params *Params, salt, key []byte, err error) {
+// DecodeHash expects a hash created from this package, and parses it to return the params used to
+// create it, as well as the salt and key (password hash).
+func DecodeHash(hash string) (params *Params, salt, key []byte, err error) {
 	vals := strings.Split(hash, "$")
 	if len(vals) != 6 {
 		return nil, nil, nil, ErrInvalidHash
