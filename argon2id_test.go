@@ -88,3 +88,24 @@ func TestCheckHash(t *testing.T) {
 		t.Fatalf("expected %#v got %#v", *DefaultParams, *params)
 	}
 }
+
+func TestStrictDecoding(t *testing.T) {
+	// "bug" valid hash: $argon2id$v=19$m=65536,t=1,p=2$UDk0zEuIzbt0x3bwkf8Bgw$ihSfHWUJpTgDvNWiojrgcN4E0pJdUVmqCEdRZesx9tE
+	ok, _, err := CheckHash("bug", "$argon2id$v=19$m=65536,t=1,p=2$UDk0zEuIzbt0x3bwkf8Bgw$ihSfHWUJpTgDvNWiojrgcN4E0pJdUVmqCEdRZesx9tE")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ok {
+		t.Fatal("expected password to match")
+	}
+
+	// changed one last character of the hash
+	ok, _, err = CheckHash("bug", "$argon2id$v=19$m=65536,t=1,p=2$UDk0zEuIzbt0x3bwkf8Bgw$ihSfHWUJpTgDvNWiojrgcN4E0pJdUVmqCEdRZesx9tF")
+	if err == nil {
+		t.Fatal("Hash validation should fail")
+	}
+
+	if ok {
+		t.Fatal("Hash validation should fail")
+	}
+}

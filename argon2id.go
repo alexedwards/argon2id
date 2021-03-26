@@ -162,13 +162,13 @@ func DecodeHash(hash string) (params *Params, salt, key []byte, err error) {
 		return nil, nil, nil, err
 	}
 
-	salt, err = base64.RawStdEncoding.DecodeString(vals[4])
+	salt, err = base64.RawStdEncoding.Strict().DecodeString(vals[4])
 	if err != nil {
 		return nil, nil, nil, err
 	}
 	params.SaltLength = uint32(len(salt))
 
-	key, err = base64.RawStdEncoding.DecodeString(vals[5])
+	key, err = base64.RawStdEncoding.Strict().DecodeString(vals[5])
 	if err != nil {
 		return nil, nil, nil, err
 	}
