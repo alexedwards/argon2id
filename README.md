@@ -53,7 +53,7 @@ The Memory and Iterations parameters control the computational cost of hashing t
 If the code is running on a machine with multiple cores, then you can decrease the runtime without reducing the cost by increasing the Parallelism parameter. This controls the number of threads that the work is spread across. Important note: Changing the value of the Parallelism parameter changes the hash output.
 
 ```go
-params := &Params{
+params := &argon2id.Params{
 	Memory:      128 * 1024,
 	Iterations:  4,
 	Parallelism: 4,
