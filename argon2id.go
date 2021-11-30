@@ -22,7 +22,12 @@ var (
 	// hash isn't in the expected format.
 	ErrInvalidHash = errors.New("argon2id: hash is not in the correct format")
 
-	// ErrIncompatibleVersion in returned by ComparePasswordAndHash if the
+	// ErrIncompatibleVariant is returned by ComparePasswordAndHash if the
+	// provided hash was created using a unsupported variant of Argon2.
+	// Currently only argon2id is supported by this package.
+	ErrIncompatibleVariant = errors.New("argon2id: incompatible variant of argon2")
+
+	// ErrIncompatibleVersion is returned by ComparePasswordAndHash if the
 	// provided hash was created using a different version of Argon2.
 	ErrIncompatibleVersion = errors.New("argon2id: incompatible version of argon2")
 )
@@ -145,6 +150,10 @@ func DecodeHash(hash string) (params *Params, salt, key []byte, err error) {
 	vals := strings.Split(hash, "$")
 	if len(vals) != 6 {
 		return nil, nil, nil, ErrInvalidHash
+	}
+
+	if vals[1] != "argon2id" {
+		return nil, nil, nil, ErrIncompatibleVariant
 	}
 
 	var version int
