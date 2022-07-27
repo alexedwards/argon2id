@@ -1,9 +1,12 @@
 package argon2id
 
 import (
+	"github.com/jgroeneveld/trial/assert"
+	"math/rand"
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestCreateHash(t *testing.T) {
@@ -116,4 +119,48 @@ func TestVariant(t *testing.T) {
 	if err != ErrIncompatibleVariant {
 		t.Fatalf("expected error %s", ErrIncompatibleVariant)
 	}
+}
+
+func TestHashLambdaAndMatchLambda(t *testing.T) {
+	password := GenerateRandomString(10)
+	hash, err := HashLambda(password)
+	assert.Nil(t, err)
+
+	match, err := MatchLambda(password, hash)
+	assert.Nil(t, err)
+
+	assert.True(t, match)
+}
+
+func TestHashLambdaPasswordBoundaryValues(t *testing.T) {
+	passwordLengthMinus1 := GenerateRandomString(LambdaKeyLength - 1)
+	passwordLengthEqual := GenerateRandomString(LambdaKeyLength)
+	passwordLengthPlus1 := GenerateRandomString(LambdaKeyLength + 1)
+
+	hash1, err := HashLambda(passwordLengthMinus1)
+	assert.Nil(t, err)
+
+	assert.True(t, len(hash1) > 10)
+
+	hash2, err := HashLambda(passwordLengthEqual)
+	assert.Nil(t, err)
+
+	assert.True(t, len(hash2) > 10)
+
+	hash3, err := HashLambda(passwordLengthPlus1)
+	assert.NotNil(t, err)
+
+	assert.True(t, len(hash3) == 0)
+}
+
+var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+func GenerateRandomString(n int) string {
+	rand.Seed(time.Now().UnixNano())
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+
+	return string(b)
 }

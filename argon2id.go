@@ -1,4 +1,4 @@
-// Package argon2id provides a convience wrapper around Go's golang.org/x/crypto/argon2
+// Package argon2id provides a convenient wrapper around Go's golang.org/x/crypto/argon2
 // implementation, making it simpler to securely hash and verify passwords
 // using Argon2.
 //
@@ -12,6 +12,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 
 	"golang.org/x/crypto/argon2"
@@ -23,7 +24,7 @@ var (
 	ErrInvalidHash = errors.New("argon2id: hash is not in the correct format")
 
 	// ErrIncompatibleVariant is returned by ComparePasswordAndHash if the
-	// provided hash was created using a unsupported variant of Argon2.
+	// provided hash was created using an unsupported variant of Argon2.
 	// Currently only argon2id is supported by this package.
 	ErrIncompatibleVariant = errors.New("argon2id: incompatible variant of argon2")
 
@@ -48,6 +49,21 @@ var DefaultParams = &Params{
 	Parallelism: 2,
 	SaltLength:  16,
 	KeyLength:   32,
+}
+
+// LambdaKeyLength has been chosen to work well with LambdaParams
+// so that the hash function is not overly slow for AWS Lambda to compute
+const LambdaKeyLength = 64
+
+// LambdaParams have been optimized to execute on a base AWS Lambda instance
+// with default memory and CPU settings. The total hash time should take around
+// a second to finish on Lambda.
+var LambdaParams = &Params{
+	Memory:      64 * 1024,
+	Iterations:  15,
+	Parallelism: 4,
+	SaltLength:  64,
+	KeyLength:   LambdaKeyLength,
 }
 
 // Params describes the input parameters used by the Argon2id algorithm. The
@@ -80,7 +96,7 @@ type Params struct {
 	KeyLength uint32
 }
 
-// CreateHash returns a Argon2id hash of a plain-text password using the
+// CreateHash returns an Argon2id hash of a plain-text password using the
 // provided algorithm parameters. The returned hash follows the format used by
 // the Argon2 reference C implementation and contains the base64-encoded Argon2id d
 // derived key prefixed by the salt and parameters. It looks like this:
@@ -184,4 +200,34 @@ func DecodeHash(hash string) (params *Params, salt, key []byte, err error) {
 	params.KeyLength = uint32(len(key))
 
 	return params, salt, key, nil
+}
+
+// HashLambda will hash a password as a string using the LambdaKeyLength
+// automatically and is built to work with the LambdaParams
+func HashLambda(password string) (string, error) {
+	if len(password) > LambdaKeyLength {
+		return "", fmt.Errorf("max password length is %d", LambdaKeyLength)
+	}
+
+	hash, err := CreateHash(password, LambdaParams)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return hash, nil
+}
+
+// MatchLambda will hash and compare a password as a string using the
+// LambdaKeyLength automatically and is built to work with the LambdaParams
+func MatchLambda(password, hash string) (bool, error) {
+	if len(password) > LambdaKeyLength {
+		return false, fmt.Errorf("max password length is %d", LambdaKeyLength)
+	}
+
+	match, err := ComparePasswordAndHash(password, hash)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return match, nil
 }
