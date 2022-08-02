@@ -12,6 +12,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 
 	"golang.org/x/crypto/argon2"
@@ -136,7 +137,7 @@ func CheckHash(password, hash string) (match bool, params *Params, err error) {
 
 func generateRandomBytes(n uint32) ([]byte, error) {
 	b := make([]byte, n)
-	_, err := rand.Read(b)
+	_, err := io.ReadFull(rand.Reader, b)
 	if err != nil {
 		return nil, err
 	}
