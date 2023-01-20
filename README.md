@@ -26,9 +26,68 @@ It enforces use of the Argon2id algorithm variant and cryptographically-secure r
    3. Try to match the user input against the hash: `match, err := lambda_argon.Match(password, hash)`
 
 ## Sample Login Lambda Handler Example
-```
+``` go
+func LoginLambda(ctx context.Context, lambdaReq events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	var loginReq LoginReq
+	err := json.Unmarshal(lambdaReq.Body, &loginReq)
+	if err != nil {
+		return ERROR - internal server
+	}
+
+	adminByEmail, err := admin.GetByEmail(ctx, loginReq.Email)
+	if err != nil {
+		return ERROR - not found
+	}
+
+	// check if the password provided matches the hashed one saved in this admin
+	match, err := lambda_argon.Match(loginReq.Password, adminByEmail.Password)
+	if err != nil {
+		return ERROR - bad request
+	}
+
+	// check if the password matches
+	if !match {
+		return ERROR - unauthorized
+	}
+
+	return SUCCESS
+}
 ```
 
 ## Sample Update Password Lambda Handler Example
-```
+``` go
+func UpdatePasswordLambda(ctx context.Context, lambdaReq events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	var updatePasswordReq UpdatePasswordReq
+	err := json.Unmarshal(lambdaReq.Body, &updatePasswordReq)
+	if err != nil {
+		return ERROR - internal server
+	}
+
+    adminByEmail, err := admin.GetByEmail(ctx, loginReq.Email)
+	if err != nil {
+		return ERROR - not found
+	}
+
+	match, err := lambda_argon.Match(updatePasswordReq.Password, adminByEmail.Password)
+	if err != nil {
+		return ERROR - bad request
+	}
+
+	// check if the password matches
+	if !match {
+		return ERROR - unauthorized
+	}
+
+	hash, err := argon2id.Hash(updatePasswordReq.NewPassword)
+	if err != nil {
+		return ERROR - bad request
+	}
+
+	httpStatus, err = admin.SetPassword(ctx, adminById.ID, hash)
+	if err != nil {
+		return ERROR - conflict
+	}
+
+    return SUCCESS
+}
 ```
