@@ -1,4 +1,4 @@
-module github.com/seantcanavan/argon2id
+module github.com/seantcanavan/lambda_argon
 
 go 1.18
 

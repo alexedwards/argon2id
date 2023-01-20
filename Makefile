@@ -3,7 +3,7 @@ SHELL := /bin/bash
 .PHONY: build format test
 
 build:
-	go build .
+	env GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" lib.go
 
 format:
 	gofmt -s -w -l .
