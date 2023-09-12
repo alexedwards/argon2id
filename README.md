@@ -11,6 +11,7 @@ package main
 
 import (
 	"log"
+	"runtime"
 
 	"github.com/alexedwards/argon2id"
 )
@@ -56,7 +57,7 @@ If the code is running on a machine with multiple cores, then you can decrease t
 params := &argon2id.Params{
 	Memory:      128 * 1024,
 	Iterations:  4,
-	Parallelism: 4,
+	Parallelism: uint8(runtime.NumCPU()),
 	SaltLength:  16,
 	KeyLength:   32,
 }
