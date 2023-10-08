@@ -11,7 +11,6 @@ package main
 
 import (
 	"log"
-	"runtime"
 
 	"github.com/alexedwards/argon2id"
 )
