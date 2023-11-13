@@ -7,11 +7,13 @@
 package argon2id
 
 import (
+	"bytes"
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"runtime"
 	"strings"
 
@@ -148,17 +150,16 @@ func generateRandomBytes(n uint32) ([]byte, error) {
 // DecodeHash expects a hash created from this package, and parses it to return the params used to
 // create it, as well as the salt and key (password hash).
 func DecodeHash(hash string) (params *Params, salt, key []byte, err error) {
-	vals := strings.Split(hash, "$")
-	if len(vals) != 6 {
-		return nil, nil, nil, ErrInvalidHash
-	}
 
-	if vals[1] != "argon2id" {
+	r := strings.NewReader(hash)
+
+	_, err = fmt.Fscanf(r, "$argon2id$")
+	if err != nil {
 		return nil, nil, nil, ErrIncompatibleVariant
 	}
 
 	var version int
-	_, err = fmt.Sscanf(vals[2], "v=%d", &version)
+	_, err = fmt.Fscanf(r, "v=%d$", &version)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -167,18 +168,35 @@ func DecodeHash(hash string) (params *Params, salt, key []byte, err error) {
 	}
 
 	params = &Params{}
-	_, err = fmt.Sscanf(vals[3], "m=%d,t=%d,p=%d", &params.Memory, &params.Iterations, &params.Parallelism)
+	_, err = fmt.Fscanf(r, "m=%d,t=%d,p=%d$", &params.Memory, &params.Iterations, &params.Parallelism)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	salt, err = base64.RawStdEncoding.Strict().DecodeString(vals[4])
+	rest, err := ioutil.ReadAll(r)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if bytes.ContainsAny(rest, "\r\n") { // base64 decoder ignores these
+		return nil, nil, nil, ErrInvalidHash
+	}
+
+	var i int
+	if i = bytes.IndexByte(rest, '$'); i == -1 {
+		return nil, nil, nil, ErrInvalidHash
+	}
+
+	b64Enc := base64.RawStdEncoding.Strict()
+
+	salt = make([]byte, b64Enc.DecodedLen(i))
+	_, err = b64Enc.Decode(salt, rest[:i])
 	if err != nil {
 		return nil, nil, nil, err
 	}
 	params.SaltLength = uint32(len(salt))
 
-	key, err = base64.RawStdEncoding.Strict().DecodeString(vals[5])
+	key = make([]byte, b64Enc.DecodedLen(len(rest)-i-1))
+	_, err = b64Enc.Decode(key, rest[i+1:])
 	if err != nil {
 		return nil, nil, nil, err
 	}

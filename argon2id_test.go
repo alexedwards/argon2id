@@ -56,6 +56,8 @@ func TestComparePasswordAndHash(t *testing.T) {
 	}
 }
 
+const bugHash = "$argon2id$v=19$m=65536,t=1,p=2$UDk0zEuIzbt0x3bwkf8Bgw$ihSfHWUJpTgDvNWiojrgcN4E0pJdUVmqCEdRZesx9tE"
+
 func TestDecodeHash(t *testing.T) {
 	hash, err := CreateHash("pa$$word", DefaultParams)
 	if err != nil {
@@ -68,6 +70,24 @@ func TestDecodeHash(t *testing.T) {
 	}
 	if *params != *DefaultParams {
 		t.Fatalf("expected %#v got %#v", *DefaultParams, *params)
+	}
+
+	for _, c := range []string{"v", "m", "t", "p"} {
+		re := regexp.MustCompile("([$,])(" + c + "=[^$,]+)")
+		_, _, _, err = DecodeHash(re.ReplaceAllString(bugHash, "$1JUNK+$2"))
+		if err == nil {
+			t.Fatalf("leading %s key junk should fail decode", c)
+		}
+		_, _, _, err = DecodeHash(re.ReplaceAllString(bugHash, "$1$2+JUNK"))
+		if err == nil {
+			t.Fatalf("trailing %s value junk should fail decode", c)
+		}
+	}
+
+	i := strings.LastIndex(bugHash, "$")
+	_, _, _, err = DecodeHash(bugHash[:i] + "\r$\n" + bugHash[i+1:])
+	if err == nil {
+		t.Fatalf(`\r and \n in base64 data should fail decode`)
 	}
 }
 
@@ -90,8 +110,7 @@ func TestCheckHash(t *testing.T) {
 }
 
 func TestStrictDecoding(t *testing.T) {
-	// "bug" valid hash: $argon2id$v=19$m=65536,t=1,p=2$UDk0zEuIzbt0x3bwkf8Bgw$ihSfHWUJpTgDvNWiojrgcN4E0pJdUVmqCEdRZesx9tE
-	ok, _, err := CheckHash("bug", "$argon2id$v=19$m=65536,t=1,p=2$UDk0zEuIzbt0x3bwkf8Bgw$ihSfHWUJpTgDvNWiojrgcN4E0pJdUVmqCEdRZesx9tE")
+	ok, _, err := CheckHash("bug", bugHash)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,7 +119,7 @@ func TestStrictDecoding(t *testing.T) {
 	}
 
 	// changed one last character of the hash
-	ok, _, err = CheckHash("bug", "$argon2id$v=19$m=65536,t=1,p=2$UDk0zEuIzbt0x3bwkf8Bgw$ihSfHWUJpTgDvNWiojrgcN4E0pJdUVmqCEdRZesx9tF")
+	ok, _, err = CheckHash("bug", bugHash[:len(bugHash)-1]+"F")
 	if err == nil {
 		t.Fatal("Hash validation should fail")
 	}
