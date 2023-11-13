@@ -1,4 +1,4 @@
-// Package argon2id provides a convience wrapper around Go's golang.org/x/crypto/argon2
+// Package argon2id provides a convenience wrapper around Go's golang.org/x/crypto/argon2
 // implementation, making it simpler to securely hash and verify passwords
 // using Argon2.
 //
@@ -81,7 +81,7 @@ type Params struct {
 	KeyLength uint32
 }
 
-// CreateHash returns a Argon2id hash of a plain-text password using the
+// CreateHash returns an Argon2id hash of a plain-text password using the
 // provided algorithm parameters. The returned hash follows the format used by
 // the Argon2 reference C implementation and contains the base64-encoded Argon2id d
 // derived key prefixed by the salt and parameters. It looks like this:
