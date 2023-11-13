@@ -83,6 +83,12 @@ func TestDecodeHash(t *testing.T) {
 			t.Fatalf("trailing %s value junk should fail decode", c)
 		}
 	}
+
+	i := strings.LastIndex(bugHash, "$")
+	_, _, _, err = DecodeHash(bugHash[:i] + "\r$\n" + bugHash[i+1:])
+	if err == nil {
+		t.Fatalf(`\r and \n in base64 data should fail decode`)
+	}
 }
 
 func TestCheckHash(t *testing.T) {
