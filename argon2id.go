@@ -86,9 +86,8 @@ type Params struct {
 // the Argon2 reference C implementation and contains the base64-encoded Argon2id d
 // derived key prefixed by the salt and parameters. It looks like this:
 //
-//		$argon2id$v=19$m=65536,t=3,p=2$c29tZXNhbHQ$RdescudvJCsgt3ub+b+dWRWJTmaaJObG
-//
-func CreateHash(password string, params *Params) (hash string, err error) {
+//	$argon2id$v=19$m=65536,t=3,p=2$c29tZXNhbHQ$RdescudvJCsgt3ub+b+dWRWJTmaaJObG
+func CreateHash[T interface{ string | []byte }](password T, params *Params) (hash string, err error) {
 	salt, err := generateRandomBytes(params.SaltLength)
 	if err != nil {
 		return "", err
@@ -107,7 +106,7 @@ func CreateHash(password string, params *Params) (hash string, err error) {
 // plain-text password and Argon2id hash, using the parameters and salt
 // contained in the hash. It returns true if they match, otherwise it returns
 // false.
-func ComparePasswordAndHash(password, hash string) (match bool, err error) {
+func ComparePasswordAndHash[T interface{ string | []byte }](password T, hash string) (match bool, err error) {
 	match, _, err = CheckHash(password, hash)
 	return match, err
 }
@@ -115,7 +114,7 @@ func ComparePasswordAndHash(password, hash string) (match bool, err error) {
 // CheckHash is like ComparePasswordAndHash, except it also returns the params that the hash was
 // created with. This can be useful if you want to update your hash params over time (which you
 // should).
-func CheckHash(password, hash string) (match bool, params *Params, err error) {
+func CheckHash[T interface{ string | []byte }](password T, hash string) (match bool, params *Params, err error) {
 	params, salt, key, err := DecodeHash(hash)
 	if err != nil {
 		return false, nil, err
