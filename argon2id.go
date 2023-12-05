@@ -65,20 +65,20 @@ var DefaultParams = &Params{
 // https://tools.ietf.org/html/draft-irtf-cfrg-argon2-04#section-4
 type Params struct {
 	// The amount of memory used by the algorithm (in kibibytes).
-	Memory uint32
+	Memory uint32 `json:"m"`
 
 	// The number of iterations over the memory.
-	Iterations uint32
+	Iterations uint32 `json:"t"`
 
 	// The number of threads (or lanes) used by the algorithm.
 	// Recommended value is between 1 and runtime.NumCPU().
-	Parallelism uint8
+	Parallelism uint8 `json:"p"`
 
 	// Length of the random salt. 16 bytes is recommended for password hashing.
-	SaltLength uint32
+	SaltLength uint32 `json:"s"`
 
 	// Length of the generated key. 16 bytes or more is recommended.
-	KeyLength uint32
+	KeyLength uint32 `json:"k"`
 }
 
 // CreateHash returns an Argon2id hash of a plain-text password using the
@@ -86,8 +86,7 @@ type Params struct {
 // the Argon2 reference C implementation and contains the base64-encoded Argon2id d
 // derived key prefixed by the salt and parameters. It looks like this:
 //
-//		$argon2id$v=19$m=65536,t=3,p=2$c29tZXNhbHQ$RdescudvJCsgt3ub+b+dWRWJTmaaJObG
-//
+//	$argon2id$v=19$m=65536,t=3,p=2$c29tZXNhbHQ$RdescudvJCsgt3ub+b+dWRWJTmaaJObG
 func CreateHash(password string, params *Params) (hash string, err error) {
 	salt, err := generateRandomBytes(params.SaltLength)
 	if err != nil {
