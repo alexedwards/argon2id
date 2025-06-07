@@ -33,20 +33,42 @@ var (
 	ErrIncompatibleVersion = errors.New("argon2id: incompatible version of argon2")
 )
 
-// DefaultParams provides some sane default parameters for hashing passwords.
+// DefaultParams should generally be used for development/testing purposes only.
 //
-// Follows recommendations given by the Argon2 RFC:
-// "The Argon2id variant with t=1 and maximum available memory is RECOMMENDED as a
-// default setting for all environments. This setting is secure against side-channel
-// attacks and maximizes adversarial costs on dedicated bruteforce hardware.""
-//
-// The default parameters should generally be used for development/testing purposes
-// only. Custom parameters should be set for production applications depending on
+// Deprecated: use [DevelopmentParams].
+var DefaultParams = DevelopmentParams
+
+// DevelopmentParams should generally be used for development/testing purposes only.
+// Custom parameters should be set for production applications depending on
 // available memory/CPU resources and business requirements.
-var DefaultParams = &Params{
+// For uniformly safe options see [FirstRecommendedParams] and [SecondRecommendedParams].
+var DevelopmentParams = &Params{
 	Memory:      64 * 1024,
 	Iterations:  1,
 	Parallelism: uint8(runtime.NumCPU()),
+	SaltLength:  16,
+	KeyLength:   32,
+}
+
+// FirstRecommendedParams should be used if an "option that is not tailored to your application
+// or hardware is acceptable".
+// This is RFC 9106's first recommended option.
+// See https://www.rfc-editor.org/rfc/rfc9106.html#name-parameter-choice
+var FirstRecommendedParams = &Params{
+	Memory:      1 << 21, // 2 GiB = 2^21 * 1 KiB
+	Iterations:  1,
+	Parallelism: 4,
+	SaltLength:  16,
+	KeyLength:   32,
+}
+
+// SecondRecommendedParams should be used if "much less memory is available".
+// This is RFC 9106's second recommended option.
+// See https://www.rfc-editor.org/rfc/rfc9106.html#name-parameter-choice
+var SecondRecommendedParams = &Params{
+	Memory:      64 * 1024,
+	Iterations:  3,
+	Parallelism: 4,
 	SaltLength:  16,
 	KeyLength:   32,
 }
