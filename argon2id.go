@@ -109,7 +109,7 @@ type Params struct {
 // derived key prefixed by the salt and parameters. It looks like this:
 //
 //	$argon2id$v=19$m=65536,t=3,p=2$c29tZXNhbHQ$RdescudvJCsgt3ub+b+dWRWJTmaaJObG
-func CreateHash(password string, params *Params) (hash string, err error) {
+func CreateHash[T string | []byte](password T, params *Params) (hash T, err error) {
 	salt := make([]byte, params.SaltLength)
 	_, _ = rand.Read(salt) // no error will be returned and the slice is always filled entirely
 
@@ -118,7 +118,7 @@ func CreateHash(password string, params *Params) (hash string, err error) {
 	b64Salt := base64.RawStdEncoding.EncodeToString(salt)
 	b64Key := base64.RawStdEncoding.EncodeToString(key)
 
-	hash = fmt.Sprintf("$argon2id$v=%d$m=%d,t=%d,p=%d$%s$%s", argon2.Version, params.Memory, params.Iterations, params.Parallelism, b64Salt, b64Key)
+	hash = T(fmt.Sprintf("$argon2id$v=%d$m=%d,t=%d,p=%d$%s$%s", argon2.Version, params.Memory, params.Iterations, params.Parallelism, b64Salt, b64Key))
 	return hash, nil
 }
 
@@ -126,7 +126,7 @@ func CreateHash(password string, params *Params) (hash string, err error) {
 // plain-text password and Argon2id hash, using the parameters and salt
 // contained in the hash. It returns true if they match, otherwise it returns
 // false.
-func ComparePasswordAndHash(password, hash string) (match bool, err error) {
+func ComparePasswordAndHash[T string | []byte](password, hash T) (match bool, err error) {
 	match, _, err = CheckHash(password, hash)
 	return match, err
 }
@@ -134,7 +134,7 @@ func ComparePasswordAndHash(password, hash string) (match bool, err error) {
 // CheckHash is like ComparePasswordAndHash, except it also returns the params that the hash was
 // created with. This can be useful if you want to update your hash params over time (which you
 // should).
-func CheckHash(password, hash string) (match bool, params *Params, err error) {
+func CheckHash[T string | []byte](password, hash T) (match bool, params *Params, err error) {
 	params, salt, key, err := DecodeHash(hash)
 	if err != nil {
 		return false, nil, err
@@ -150,7 +150,8 @@ func CheckHash(password, hash string) (match bool, params *Params, err error) {
 
 // DecodeHash expects a hash created from this package, and parses it to return the params used to
 // create it, as well as the salt and key (password hash).
-func DecodeHash(hash string) (params *Params, salt, key []byte, err error) {
+func DecodeHash[T string | []byte](hashValue T) (params *Params, salt, key []byte, err error) {
+	hash := string(hashValue)
 	vals := strings.Split(hash, "$")
 	if len(vals) != 6 {
 		return nil, nil, nil, ErrInvalidHash
