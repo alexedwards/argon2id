@@ -111,10 +111,8 @@ type Params struct {
 //		$argon2id$v=19$m=65536,t=3,p=2$c29tZXNhbHQ$RdescudvJCsgt3ub+b+dWRWJTmaaJObG
 //
 func CreateHash(password string, params *Params) (hash string, err error) {
-	salt, err := generateRandomBytes(params.SaltLength)
-	if err != nil {
-		return "", err
-	}
+	salt := make([]byte, params.SaltLength)
+	_, _ = rand.Read(salt) // no error will be returned and the slice is always filled entirely
 
 	key := argon2.IDKey([]byte(password), salt, params.Iterations, params.Memory, params.Parallelism, params.KeyLength)
 
@@ -155,16 +153,6 @@ func CheckHash(password, hash string) (match bool, params *Params, err error) {
 		return true, params, nil
 	}
 	return false, params, nil
-}
-
-func generateRandomBytes(n uint32) ([]byte, error) {
-	b := make([]byte, n)
-	_, err := rand.Read(b)
-	if err != nil {
-		return nil, err
-	}
-
-	return b, nil
 }
 
 // DecodeHash expects a hash created from this package, and parses it to return the params used to
