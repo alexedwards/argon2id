@@ -12,7 +12,7 @@ func TestCreateHash(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	hash1, err := CreateHash("pa$$word", DefaultParams)
+	hash1, err := CreateHash("pa$$word", DevelopmentParams)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -21,7 +21,7 @@ func TestCreateHash(t *testing.T) {
 		t.Errorf("hash %q not in correct format", hash1)
 	}
 
-	hash2, err := CreateHash("pa$$word", DefaultParams)
+	hash2, err := CreateHash("pa$$word", DevelopmentParams)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,7 +32,7 @@ func TestCreateHash(t *testing.T) {
 }
 
 func TestComparePasswordAndHash(t *testing.T) {
-	hash, err := CreateHash("pa$$word", DefaultParams)
+	hash, err := CreateHash("pa$$word", DevelopmentParams)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,7 +57,7 @@ func TestComparePasswordAndHash(t *testing.T) {
 }
 
 func TestDecodeHash(t *testing.T) {
-	hash, err := CreateHash("pa$$word", DefaultParams)
+	hash, err := CreateHash("pa$$word", DevelopmentParams)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,13 +66,13 @@ func TestDecodeHash(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if *params != *DefaultParams {
-		t.Fatalf("expected %#v got %#v", *DefaultParams, *params)
+	if *params != *DevelopmentParams {
+		t.Fatalf("expected %#v got %#v", *DevelopmentParams, *params)
 	}
 }
 
 func TestCheckHash(t *testing.T) {
-	hash, err := CreateHash("pa$$word", DefaultParams)
+	hash, err := CreateHash("pa$$word", DevelopmentParams)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -84,8 +84,8 @@ func TestCheckHash(t *testing.T) {
 	if !ok {
 		t.Fatal("expected password to match")
 	}
-	if *params != *DefaultParams {
-		t.Fatalf("expected %#v got %#v", *DefaultParams, *params)
+	if *params != *DevelopmentParams {
+		t.Fatalf("expected %#v got %#v", *DevelopmentParams, *params)
 	}
 }
 

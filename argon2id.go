@@ -33,20 +33,42 @@ var (
 	ErrIncompatibleVersion = errors.New("argon2id: incompatible version of argon2")
 )
 
-// DefaultParams provides some sane default parameters for hashing passwords.
+// DefaultParams should generally be used for development/testing purposes only.
 //
-// Follows recommendations given by the Argon2 RFC:
-// "The Argon2id variant with t=1 and maximum available memory is RECOMMENDED as a
-// default setting for all environments. This setting is secure against side-channel
-// attacks and maximizes adversarial costs on dedicated bruteforce hardware.""
-//
-// The default parameters should generally be used for development/testing purposes
-// only. Custom parameters should be set for production applications depending on
+// Deprecated: use [DevelopmentParams].
+var DefaultParams = DevelopmentParams
+
+// DevelopmentParams should generally be used for development/testing purposes only.
+// Custom parameters should be set for production applications depending on
 // available memory/CPU resources and business requirements.
-var DefaultParams = &Params{
+// For uniformly safe options see [FirstRecommendedParams] and [SecondRecommendedParams].
+var DevelopmentParams = &Params{
 	Memory:      64 * 1024,
 	Iterations:  1,
 	Parallelism: uint8(runtime.NumCPU()),
+	SaltLength:  16,
+	KeyLength:   32,
+}
+
+// FirstRecommendedParams should be used if an "option that is not tailored to your application
+// or hardware is acceptable".
+// This is RFC 9106's first recommended option.
+// See https://www.rfc-editor.org/rfc/rfc9106.html#name-parameter-choice
+var FirstRecommendedParams = &Params{
+	Memory:      1 << 21, // 2 GiB = 2^21 * 1 KiB
+	Iterations:  1,
+	Parallelism: 4,
+	SaltLength:  16,
+	KeyLength:   32,
+}
+
+// SecondRecommendedParams should be used if "much less memory is available".
+// This is RFC 9106's second recommended option.
+// See https://www.rfc-editor.org/rfc/rfc9106.html#name-parameter-choice
+var SecondRecommendedParams = &Params{
+	Memory:      64 * 1024,
+	Iterations:  3,
+	Parallelism: 4,
 	SaltLength:  16,
 	KeyLength:   32,
 }
@@ -86,20 +108,17 @@ type Params struct {
 // the Argon2 reference C implementation and contains the base64-encoded Argon2id
 // derived key prefixed by the salt and parameters. It looks like this:
 //
-//		$argon2id$v=19$m=65536,t=3,p=2$c29tZXNhbHQ$RdescudvJCsgt3ub+b+dWRWJTmaaJObG
-//
-func CreateHash(password string, params *Params) (hash string, err error) {
-	salt, err := generateRandomBytes(params.SaltLength)
-	if err != nil {
-		return "", err
-	}
+//	$argon2id$v=19$m=65536,t=3,p=2$c29tZXNhbHQ$RdescudvJCsgt3ub+b+dWRWJTmaaJObG
+func CreateHash[T string | []byte](password T, params *Params) (hash T, err error) {
+	salt := make([]byte, params.SaltLength)
+	_, _ = rand.Read(salt) // no error will be returned and the slice is always filled entirely
 
 	key := argon2.IDKey([]byte(password), salt, params.Iterations, params.Memory, params.Parallelism, params.KeyLength)
 
 	b64Salt := base64.RawStdEncoding.EncodeToString(salt)
 	b64Key := base64.RawStdEncoding.EncodeToString(key)
 
-	hash = fmt.Sprintf("$argon2id$v=%d$m=%d,t=%d,p=%d$%s$%s", argon2.Version, params.Memory, params.Iterations, params.Parallelism, b64Salt, b64Key)
+	hash = T(fmt.Sprintf("$argon2id$v=%d$m=%d,t=%d,p=%d$%s$%s", argon2.Version, params.Memory, params.Iterations, params.Parallelism, b64Salt, b64Key))
 	return hash, nil
 }
 
@@ -107,7 +126,7 @@ func CreateHash(password string, params *Params) (hash string, err error) {
 // plain-text password and Argon2id hash, using the parameters and salt
 // contained in the hash. It returns true if they match, otherwise it returns
 // false.
-func ComparePasswordAndHash(password, hash string) (match bool, err error) {
+func ComparePasswordAndHash[T string | []byte](password, hash T) (match bool, err error) {
 	match, _, err = CheckHash(password, hash)
 	return match, err
 }
@@ -115,7 +134,7 @@ func ComparePasswordAndHash(password, hash string) (match bool, err error) {
 // CheckHash is like ComparePasswordAndHash, except it also returns the params that the hash was
 // created with. This can be useful if you want to update your hash params over time (which you
 // should).
-func CheckHash(password, hash string) (match bool, params *Params, err error) {
+func CheckHash[T string | []byte](password, hash T) (match bool, params *Params, err error) {
 	params, salt, key, err := DecodeHash(hash)
 	if err != nil {
 		return false, nil, err
@@ -123,31 +142,16 @@ func CheckHash(password, hash string) (match bool, params *Params, err error) {
 
 	otherKey := argon2.IDKey([]byte(password), salt, params.Iterations, params.Memory, params.Parallelism, params.KeyLength)
 
-	keyLen := int32(len(key))
-	otherKeyLen := int32(len(otherKey))
-
-	if subtle.ConstantTimeEq(keyLen, otherKeyLen) == 0 {
-		return false, params, nil
-	}
 	if subtle.ConstantTimeCompare(key, otherKey) == 1 {
 		return true, params, nil
 	}
 	return false, params, nil
 }
 
-func generateRandomBytes(n uint32) ([]byte, error) {
-	b := make([]byte, n)
-	_, err := rand.Read(b)
-	if err != nil {
-		return nil, err
-	}
-
-	return b, nil
-}
-
 // DecodeHash expects a hash created from this package, and parses it to return the params used to
 // create it, as well as the salt and key (password hash).
-func DecodeHash(hash string) (params *Params, salt, key []byte, err error) {
+func DecodeHash[T string | []byte](hashValue T) (params *Params, salt, key []byte, err error) {
+	hash := string(hashValue)
 	vals := strings.Split(hash, "$")
 	if len(vals) != 6 {
 		return nil, nil, nil, ErrInvalidHash
