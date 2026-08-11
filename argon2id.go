@@ -33,6 +33,10 @@ var (
 	// ErrIncompatibleVersion is returned by ComparePasswordAndHash if the
 	// provided hash was created using a different version of Argon2.
 	ErrIncompatibleVersion = errors.New("argon2id: incompatible version of argon2")
+
+	// ErrInvalidParameterSeparator is returned by ComparePasswordAndHash if the
+	// provided hash contains an invalid character after a parameter.
+	ErrInvalidParameterSeparator = errors.New("argon2id: invalid parameter separator")
 )
 
 // DefaultParams provides some sane default parameters for hashing passwords.
@@ -167,9 +171,31 @@ func DecodeHash(hash string) (params *Params, salt, key []byte, err error) {
 	}
 
 	params = &Params{}
-	_, err = fmt.Fscanf(r, "m=%d,t=%d,p=%d$", &params.Memory, &params.Iterations, &params.Parallelism)
-	if err != nil {
-		return nil, nil, nil, err
+	for i := 0; i < 3; i++ {
+		var param rune
+		var value uint32
+
+		_, err = fmt.Fscanf(r, "%c=%d", &param, &value)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+
+		switch param {
+		case 'm':
+			params.Memory = value
+		case 't':
+			params.Iterations = value
+		case 'p':
+			params.Parallelism = uint8(value)
+		}
+
+		separator, _, err := r.ReadRune()
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		if i < 2 && separator != ',' || i == 2 && separator != '$' {
+			return nil, nil, nil, ErrInvalidParameterSeparator
+		}
 	}
 
 	rest, err := ioutil.ReadAll(r)
