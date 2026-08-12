@@ -171,6 +171,12 @@ func DecodeHash(hash string) (params *Params, salt, key []byte, err error) {
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	// argon2.IDKey panics if the number of iterations or the degree of
+	// parallelism is zero, so reject such a hash here instead of letting
+	// CheckHash/ComparePasswordAndHash panic on untrusted input (#36).
+	if params.Iterations == 0 || params.Parallelism == 0 {
+		return nil, nil, nil, ErrInvalidHash
+	}
 
 	rest, err := ioutil.ReadAll(r)
 	if err != nil {

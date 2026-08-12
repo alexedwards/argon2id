@@ -156,6 +156,26 @@ func TestDecodeHash(t *testing.T) {
 	}
 }
 
+func TestDecodeHashRejectsZeroParams(t *testing.T) {
+	// #36: a hash with zero iterations (t=0) or zero parallelism (p=0) must be
+	// rejected with an error, not cause argon2.IDKey to panic.
+	for _, hash := range []string{
+		"$argon2id$v=19$m=8,t=0,p=1$c2FsdHNhbHQ$a2V5",
+		"$argon2id$v=19$m=8,t=1,p=0$c2FsdHNhbHQ$a2V5",
+	} {
+		if _, _, _, err := DecodeHash(hash); err == nil {
+			t.Errorf("DecodeHash(%q): expected an error, got nil", hash)
+		}
+		match, err := ComparePasswordAndHash("password", hash)
+		if err == nil {
+			t.Errorf("ComparePasswordAndHash(%q): expected an error, got nil", hash)
+		}
+		if match {
+			t.Errorf("ComparePasswordAndHash(%q): expected no match", hash)
+		}
+	}
+}
+
 func TestDecodeHashBytes(t *testing.T) {
 	password, err := generateRandomBytes(16)
 	if err != nil {
