@@ -13,7 +13,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"runtime"
 	"strings"
 
@@ -172,7 +172,7 @@ func DecodeHash(hash string) (params *Params, salt, key []byte, err error) {
 		return nil, nil, nil, err
 	}
 
-	rest, err := ioutil.ReadAll(r)
+	rest, err := io.ReadAll(r)
 	if err != nil {
 		return nil, nil, nil, err
 	}
