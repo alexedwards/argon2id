@@ -13,12 +13,54 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"runtime"
 	"strings"
+	"sync"
 
 	"golang.org/x/crypto/argon2"
 )
+
+var (
+	semMu sync.RWMutex
+	sem   chan struct{}
+)
+
+// SetMaxConcurrency limits the number of argon2id key-derivation operations
+// that may run simultaneously. Each operation holds approximately
+// Params.Memory KiB of heap while it runs, so bounding concurrency caps
+// worst-case memory growth to n × Params.Memory.
+//
+// Call this once at program startup (e.g. in main or TestMain) before any
+// hashing operations begin. Calling it while hashes are in flight is safe but
+// the new limit will only apply to operations that acquire the semaphore after
+// the call returns.
+//
+// A value of 0 (the default) disables throttling and restores the original
+// unbounded behaviour.
+func SetMaxConcurrency(n int) {
+	semMu.Lock()
+	defer semMu.Unlock()
+	if n > 0 {
+		sem = make(chan struct{}, n)
+	} else {
+		sem = nil
+	}
+}
+
+// withSem runs fn while holding one slot of the concurrency semaphore.
+// If no semaphore is configured (SetMaxConcurrency has not been called or was
+// called with 0) fn is invoked directly with no overhead.
+func withSem(fn func()) {
+	semMu.RLock()
+	s := sem
+	semMu.RUnlock()
+	if s != nil {
+		s <- struct{}{}
+		defer func() { <-s }()
+	}
+	fn()
+}
 
 var (
 	// ErrInvalidHash in returned by ComparePasswordAndHash if the provided
@@ -95,7 +137,10 @@ func CreateHash[T interface{ string | []byte }](password T, params *Params) (has
 		return "", err
 	}
 
-	key := argon2.IDKey([]byte(password), salt, params.Iterations, params.Memory, params.Parallelism, params.KeyLength)
+	var key []byte
+	withSem(func() {
+		key = argon2.IDKey([]byte(password), salt, params.Iterations, params.Memory, params.Parallelism, params.KeyLength)
+	})
 
 	b64Salt := base64.RawStdEncoding.EncodeToString(salt)
 	b64Key := base64.RawStdEncoding.EncodeToString(key)
@@ -122,7 +167,10 @@ func CheckHash[T interface{ string | []byte }](password T, hash string) (match b
 		return false, nil, err
 	}
 
-	otherKey := argon2.IDKey([]byte(password), salt, params.Iterations, params.Memory, params.Parallelism, params.KeyLength)
+	var otherKey []byte
+	withSem(func() {
+		otherKey = argon2.IDKey([]byte(password), salt, params.Iterations, params.Memory, params.Parallelism, params.KeyLength)
+	})
 
 	keyLen := int32(len(key))
 	otherKeyLen := int32(len(otherKey))
@@ -172,7 +220,7 @@ func DecodeHash(hash string) (params *Params, salt, key []byte, err error) {
 		return nil, nil, nil, err
 	}
 
-	rest, err := ioutil.ReadAll(r)
+	rest, err := io.ReadAll(r)
 	if err != nil {
 		return nil, nil, nil, err
 	}
